@@ -8,10 +8,15 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /code
+
 COPY pyproject.toml uv.lock README.md /code/
 COPY src /code/src
 COPY app /code/app
+COPY helper_lib /code/helper_lib
+COPY cnn_api.py /code/cnn_api.py
+COPY models /code/models
 
 RUN uv sync --frozen
+
 EXPOSE 80
 CMD ["uv", "run", "--frozen", "fastapi", "run", "app/main.py", "--port", "80"]

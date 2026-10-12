@@ -9,3 +9,10 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+data/
+.venv/
+__pycache__/
+
+.DS_Store
+.vscode/

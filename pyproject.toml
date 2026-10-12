@@ -7,8 +7,13 @@ requires-python = ">=3.11"
 dependencies = [
     "en-core-web-lg",
     "fastapi[standard]>=0.141.1",
+    "matplotlib>=3.11.2",
+    "pillow>=12.3.0",
     "pip>=26.2.1",
+    "python-multipart>=0.0.32",
     "spacy>=3.8.16",
+    "torch>=2.14.0",
+    "torchvision>=0.29.0",
 ]
 
 [project.scripts]
@@ -20,3 +25,8 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+]
