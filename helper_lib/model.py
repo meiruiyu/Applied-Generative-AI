@@ -26,6 +26,74 @@ class AssignmentCNN(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
+class Generator(nn.Module):
+    def __init__(self, latent_dim=100):
+        super().__init__()
+        self.latent_dim = latent_dim
+        self.fc = nn.Linear(latent_dim, 128 * 7 * 7)
+
+        self.layers = nn.Sequential(
+            nn.ConvTranspose2d(
+                128, 64, kernel_size=4, stride=2, padding=1
+            ),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+
+            nn.ConvTranspose2d(
+                64, 1, kernel_size=4, stride=2, padding=1
+            ),
+            nn.Tanh(),
+        )
+
+    def forward(self, z):
+        x = self.fc(z)
+        x = x.reshape(z.size(0), 128, 7, 7)
+        return self.layers(x)
+
+
+class Discriminator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Conv2d(
+                1, 64, kernel_size=4, stride=2, padding=1
+            ),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(
+                64, 128, kernel_size=4, stride=2, padding=1
+            ),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Flatten(),
+            nn.Linear(128 * 7 * 7, 1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, images):
+        return self.layers(images)
+
+
+class GAN(nn.Module):
+    def __init__(self, latent_dim=100):
+        super().__init__()
+        self.generator = Generator(latent_dim)
+        self.discriminator = Discriminator()
+
+    def forward(self, z):
+        return self.generator(z)
+
+
+def get_model(model_name):
+    name = model_name.upper()
+
+    if name == "CNN":
+        return AssignmentCNN()
+    if name == "GAN":
+        return GAN()
+
+    raise ValueError(f"Unsupported model: {model_name}")
 
 if __name__ == "__main__":
     model = AssignmentCNN()

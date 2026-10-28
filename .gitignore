@@ -16,3 +16,13 @@ __pycache__/
 
 .DS_Store
 .vscode/
+
+
+# Assignment 3 temporary experiments
+models/gan_smoke_*.pth
+models/*_first_attempt.pth
+sample_images/gan_smoke/
+sample_images/gan_first_attempt/
+
+# Local training checkpoint; inference uses generator weights
+models/gan_checkpoint.pth
