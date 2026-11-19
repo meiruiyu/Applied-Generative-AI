@@ -50,3 +50,35 @@ def get_mnist_data_loader(
         shuffle=train,
         num_workers=0,
     )
+
+
+
+def get_cifar10_generation_loader(
+    data_dir="data",
+    batch_size=64,
+    train=True,
+    download=False,
+):
+    """Load 32x32 CIFAR-10 RGB images normalized to [-1, 1]."""
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=(0.5, 0.5, 0.5),
+            std=(0.5, 0.5, 0.5),
+        ),
+    ])
+
+    dataset = datasets.CIFAR10(
+        root=data_dir,
+        train=train,
+        download=download,
+        transform=transform,
+    )
+
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=train,
+        num_workers=0,
+    )

@@ -48,3 +48,94 @@ def generate_samples(
         plt.show()
 
     return images
+
+
+
+# Assignment 4: Diffusion and Energy-Based image generation
+
+import torch
+
+from helper_lib.trainer import (
+    DiffusionSchedule,
+    langevin_sampling,
+)
+
+
+@torch.no_grad()
+def generate_diffusion_images(
+    model,
+    num_samples=4,
+    timesteps=200,
+    device="cpu",
+):
+    """Generate CIFAR-10 images using DDPM reverse diffusion."""
+    model = model.to(device)
+    model.eval()
+
+    schedule = DiffusionSchedule(
+        timesteps=timesteps, device=device
+    )
+
+    x = torch.randn(num_samples, 3, 32, 32, device=device)
+
+    for step in reversed(range(timesteps)):
+        t = torch.full(
+            (num_samples,), step,
+            dtype=torch.long, device=device
+        )
+
+        predicted_noise = model(x, t)
+
+        alpha = schedule.alphas[step]
+        alpha_bar = schedule.alpha_bars[step]
+        beta = schedule.betas[step]
+
+        mean = (
+            x - beta / torch.sqrt(1 - alpha_bar)
+            * predicted_noise
+        ) / torch.sqrt(alpha)
+
+        if step > 0:
+            previous_alpha_bar = schedule.alpha_bars[step - 1]
+            posterior_variance = (
+                beta * (1 - previous_alpha_bar)
+                / (1 - alpha_bar)
+            )
+            x = mean + torch.sqrt(
+                posterior_variance
+            ) * torch.randn_like(x)
+        else:
+            x = mean
+
+    return x.clamp(-1, 1).detach()
+
+
+def generate_ebm_images(
+    model,
+    num_samples=4,
+    steps=100,
+    step_size=0.1,
+    noise_scale=0.01,
+    device="cpu",
+):
+    """Generate CIFAR-10 images using Langevin sampling."""
+    model = model.to(device)
+    model.eval()
+
+    initial_images = (
+        torch.rand(
+            num_samples, 3, 32, 32, device=device
+        ) * 2 - 1
+    )
+
+    # EBM sampling requires gradients with respect to images.
+    with torch.enable_grad():
+        samples = langevin_sampling(
+            model,
+            initial_images,
+            steps=steps,
+            step_size=step_size,
+            noise_scale=noise_scale,
+        )
+
+    return samples.clamp(-1, 1).detach()

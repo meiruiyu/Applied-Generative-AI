@@ -19,4 +19,5 @@ COPY models /code/models
 RUN uv sync --frozen
 
 EXPOSE 80
-CMD ["uv", "run", "--frozen", "fastapi", "run", "app/main.py", "--port", "80"]
+
+CMD ["uv", "run", "--frozen", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]

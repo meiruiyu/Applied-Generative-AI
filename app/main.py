@@ -148,3 +148,155 @@ def generate_digits(request: GANGenerationRequest):
                 'inline; filename="generated_digits.png"'
         },
     )
+
+
+
+
+# Assignment 4: Diffusion and Energy-Based image generation
+
+from helper_lib.model import get_model
+from helper_lib.generator import (
+    generate_diffusion_images,
+    generate_ebm_images,
+)
+
+
+MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
+
+DIFFUSION_WEIGHTS = MODEL_DIR / "diffusion_cifar10.pth"
+EBM_WEIGHTS = MODEL_DIR / "ebm_cifar10.pth"
+
+
+class DiffusionGenerationRequest(BaseModel):
+    num_samples: int = Field(default=2, ge=1, le=4)
+
+
+class EBMGenerationRequest(BaseModel):
+    num_samples: int = Field(default=2, ge=1, le=4)
+    steps: int = Field(default=10, ge=1, le=100)
+    step_size: float = Field(default=0.1, gt=0, le=1.0)
+    noise_scale: float = Field(default=0.01, ge=0, le=0.1)
+
+
+@lru_cache(maxsize=1)
+def load_diffusion_model():
+    if not DIFFUSION_WEIGHTS.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="Diffusion model weights are missing.",
+        )
+
+    checkpoint = torch.load(
+        DIFFUSION_WEIGHTS,
+        map_location="cpu",
+        weights_only=True,
+    )
+
+    model = get_model("DIFFUSION")
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    return model, checkpoint["timesteps"]
+
+
+@lru_cache(maxsize=1)
+def load_ebm_model():
+    if not EBM_WEIGHTS.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="EBM model weights are missing.",
+        )
+
+    checkpoint = torch.load(
+        EBM_WEIGHTS,
+        map_location="cpu",
+        weights_only=True,
+    )
+
+    model = get_model("EBM")
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    return model
+
+
+def images_to_png_response(images, filename):
+    """Convert generated image tensors to a PNG grid."""
+    images = ((images.detach().cpu() + 1) / 2).clamp(0, 1)
+
+    buffer = BytesIO()
+
+    save_image(
+        images,
+        buffer,
+        format="PNG",
+        nrow=min(4, images.size(0)),
+    )
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="image/png",
+        headers={
+            "Content-Disposition":
+                f'inline; filename="{filename}"'
+        },
+    )
+
+
+@app.post(
+    "/generate-diffusion",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Generated CIFAR-10 diffusion images.",
+            "content": {"image/png": {}},
+        }
+    },
+)
+def generate_diffusion_endpoint(
+    request: DiffusionGenerationRequest,
+):
+    model, timesteps = load_diffusion_model()
+
+    images = generate_diffusion_images(
+        model=model,
+        num_samples=request.num_samples,
+        timesteps=timesteps,
+        device="cpu",
+    )
+
+    return images_to_png_response(
+        images,
+        "generated_diffusion.png",
+    )
+
+
+@app.post(
+    "/generate-ebm",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Generated CIFAR-10 energy-based images.",
+            "content": {"image/png": {}},
+        }
+    },
+)
+def generate_ebm_endpoint(
+    request: EBMGenerationRequest,
+):
+    model = load_ebm_model()
+
+    # Langevin sampling needs gradients for the input images.
+    images = generate_ebm_images(
+        model=model,
+        num_samples=request.num_samples,
+        steps=request.steps,
+        step_size=request.step_size,
+        noise_scale=request.noise_scale,
+        device="cpu",
+    )
+
+    return images_to_png_response(
+        images,
+        "generated_ebm.png",
+    )

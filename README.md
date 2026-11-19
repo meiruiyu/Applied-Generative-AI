@@ -326,3 +326,119 @@ curl --fail-with-body -X POST \
 - A request with `num_samples: 0` returned HTTP 422.
 - The Docker image built successfully and the container started.
 - The container API returned HTTP 200 and a PNG digit grid.
+
+
+
+
+
+
+
+## Assignment 4: Advanced Image Generation
+
+This assignment extends the existing FastAPI application with
+two CIFAR-10 image generators:
+
+1. Diffusion Model (DDPM)
+2. Energy-Based Model (EBM)
+
+Both models generate 32x32 RGB images.
+
+### Implementation
+
+- `helper_lib/model.py`: DiffusionUNet and EnergyModel
+- `helper_lib/trainer.py`: DDPM training, EBM contrastive
+  training, and Langevin sampling
+- `helper_lib/generator.py`: Image generation functions
+- `helper_lib/data_loader.py`: CIFAR-10 generation data loader
+- `train_diffusion.py`: Diffusion training script
+- `train_ebm.py`: EBM training script
+- `app/main.py`: FastAPI endpoints defined directly in main.py
+
+### Training
+
+Diffusion:
+
+```bash
+uv run python train_diffusion.py \
+  --epochs 3 \
+  --batch-size 32 \
+  --timesteps 200 \
+  --output models/diffusion_cifar10.pth
+```
+
+EBM:
+
+```bash
+uv run python train_ebm.py \
+  --epochs 1 \
+  --batch-size 32 \
+  --langevin-steps 10 \
+  --max-batches 100 \
+  --output models/ebm_cifar10.pth
+```
+
+Both models were trained using CIFAR-10 images normalized
+to [-1, 1]. The EBM training used 100 batches.
+
+### Docker Deployment
+
+Build:
+
+```bash
+docker build -t sps-genai-a4 .
+```
+
+Run:
+
+```bash
+docker run --rm -p 8000:80 sps-genai-a4
+```
+
+Open the API documentation:
+
+http://127.0.0.1:8000/docs
+
+### Image Generation Endpoints
+
+POST `/generate-diffusion`
+
+Request:
+
+```json
+{"num_samples": 2}
+```
+
+POST `/generate-ebm`
+
+Request:
+
+```json
+{
+  "num_samples": 2,
+  "steps": 10,
+  "step_size": 0.1,
+  "noise_scale": 0.01
+}
+```
+
+Both endpoints return `image/png`.
+
+### Testing
+
+The application was tested locally and inside Docker.
+Both new endpoints successfully returned HTTP 200
+responses with generated PNG images.
+
+### Limitations
+
+The diffusion model was trained for 3 epochs on CIFAR-10.
+The EBM was trained for 100 batches due to computational
+constraints. EBM samples remain noisy, and image quality
+could improve with longer training and better negative
+sampling.
+
+### Previous Assignments
+
+The existing CNN, GAN, and text generation functionality
+has been preserved.
+```

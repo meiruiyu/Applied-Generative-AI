@@ -1,0 +1,17 @@
+
+.git
+.venv
+__pycache__
+*.pyc
+.DS_Store
+.vscode
+.pytest_cache
+
+data/
+sample_images/
+
+models/*smoke*.pth
+models/*first_attempt*.pth
+
+.env
+.env.*
